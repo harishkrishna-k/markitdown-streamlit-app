@@ -2,9 +2,14 @@ import streamlit as st
 import io
 import os
 import sys
-from markitdown import MarkItDown
 
-# Set page config
+# Add local package to path as a fallback
+current_dir = os.path.dirname(os.path.abspath(__file__))
+package_path = os.path.join(current_dir, "packages", "markitdown", "src")
+if os.path.exists(package_path) and package_path not in sys.path:
+    sys.path.insert(0, package_path)
+
+from markitdown import MarkItDown, StreamInfo
 st.set_page_config(
     page_title="MarkItDown Converter",
     page_icon="📝",
