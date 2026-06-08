@@ -92,21 +92,21 @@ def main():
                         import requests
                         session = requests.Session()
                         session.headers.update({
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
                             "Accept-Language": "en-US,en;q=0.9",
-                            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
                         })
-                        # Add common consent cookies
-                        session.cookies.set("CONSENT", "PENDING+999", domain=".youtube.com")
-                        session.cookies.set("SOCS", "CAESEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg", domain=".youtube.com")
                         
                         md = MarkItDown(requests_session=session)
-                        # Force the original URL to be preserved
                         stream_info = StreamInfo(url=url)
                         result = md.convert(url, stream_info=stream_info)
                         
-                        # Fallback for YouTube transcripts if markitdown's built-in fetcher was blocked
+                        # Aggressive YouTube Handling
                         if "youtube.com/watch" in url or "youtu.be/" in url:
+                            # 1. Clean up "Consent/About" text if it's the only thing returned
+                            if "AboutPressCopyright" in result.text_content or result.text_content.strip() == "YouTube":
+                                result.text_content = "# YouTube Video\n"
+                            
+                            # 2. Proactively fetch transcript if not already present
                             if "### Transcript" not in result.text_content:
                                 try:
                                     from youtube_transcript_api import YouTubeTranscriptApi
@@ -123,19 +123,30 @@ def main():
                                     
                                     if video_id:
                                         transcript = YouTubeTranscriptApi.get_transcript(video_id)
-                                        transcript_text = " ".join([t['text'] for t in transcript])
-                                        result.text_content += f"\n\n### Transcript (Direct Fetch)\n{transcript_text}"
+                                        transcript_text = "\n".join([f"[{time_format(t['start'])}] {t['text']}" for t in transcript])
+                                        
+                                        if result.text_content.strip() == "# YouTube Video":
+                                             result.text_content += f"\n(Note: Metadata blocked by YouTube, but transcript was recovered.)"
+                                             
+                                        result.text_content += f"\n\n### Transcript\n{transcript_text}"
                                 except Exception as yt_err:
-                                    st.warning(f"Note: Could not fetch transcript directly: {str(yt_err)}")
+                                    st.warning(f"Note: Could not fetch transcript: {str(yt_err)}")
                         
-                        # Generate a filename from the URL or title
+                        # Generate a filename
                         filename = "webpage.md"
-                        if result.title:
+                        if result.title and result.title != "YouTube":
                             filename = f"{result.title}.md"
                         elif "youtube.com" in url or "youtu.be" in url:
                             filename = "youtube_video.md"
                         
                         display_result(result, filename)
+
+def time_format(seconds):
+    m, s = divmod(int(seconds), 60)
+    h, m = divmod(m, 60)
+    if h > 0:
+        return f'{h:d}:{m:02d}:{s:02d}'
+    return f'{m:d}:{s:02d}'
                         
                     except Exception as e:
                         st.error(f"❌ An error occurred during conversion: {str(e)}")
