@@ -45,54 +45,76 @@ st.markdown("""
 
 def main():
     st.title("📝 MarkItDown")
-    st.subheader("Convert any document to Markdown")
+    st.subheader("Convert any document or webpage to Markdown")
     
-    st.info("Supported formats: PDF, Word, Excel, PowerPoint, HTML, ZIP, Images, Audio, and more.")
+    st.info("Supported: PDF, Word, Excel, PowerPoint, HTML, ZIP, Images, Audio, and Web URLs.")
     
-    uploaded_file = st.file_uploader(
-        "Upload a file to convert", 
-        type=None,
-        accept_multiple_files=False
-    )
+    tab1, tab2 = st.tabs(["📁 Upload File", "🌐 Convert URL"])
+    
+    with tab1:
+        uploaded_file = st.file_uploader(
+            "Upload a file to convert", 
+            type=None,
+            accept_multiple_files=False
+        )
 
-    if uploaded_file is not None:
-        if st.button("Convert to Markdown"):
-            with st.spinner("🔄 Converting..."):
-                try:
-                    md = MarkItDown()
-                    
-                    # MarkItDown.convert can take a file-like object (BinaryIO)
-                    # We need to make sure we're at the beginning of the file
-                    uploaded_file.seek(0)
-                    
-                    # Use StreamInfo for better format detection
-                    from markitdown import StreamInfo
-                    stream_info = StreamInfo(
-                        filename=uploaded_file.name,
-                        extension=os.path.splitext(uploaded_file.name)[1]
-                    )
-                    
-                    result = md.convert(uploaded_file, stream_info=stream_info)
-                    
-                    st.success("✅ Conversion successful!")
-                    
-                    # Display preview
-                    with st.expander("Preview Markdown Content"):
-                        st.markdown(result.text_content)
-                    
-                    # Prepare for download
-                    output_filename = os.path.splitext(uploaded_file.name)[0] + ".md"
-                    
-                    st.download_button(
-                        label="📥 Download Markdown File",
-                        data=result.text_content,
-                        file_name=output_filename,
-                        mime="text/markdown",
-                    )
-                    
-                except Exception as e:
-                    st.error(f"❌ An error occurred during conversion: {str(e)}")
-                    st.exception(e)
+        if uploaded_file is not None:
+            if st.button("Convert File"):
+                with st.spinner("🔄 Converting file..."):
+                    try:
+                        md = MarkItDown()
+                        uploaded_file.seek(0)
+                        
+                        stream_info = StreamInfo(
+                            filename=uploaded_file.name,
+                            extension=os.path.splitext(uploaded_file.name)[1]
+                        )
+                        
+                        result = md.convert(uploaded_file, stream_info=stream_info)
+                        display_result(result, uploaded_file.name)
+                        
+                    except Exception as e:
+                        st.error(f"❌ An error occurred during conversion: {str(e)}")
+                        st.exception(e)
+
+    with tab2:
+        url = st.text_input("Enter a URL to convert (e.g., https://example.com)")
+        if st.button("Convert URL"):
+            if url:
+                with st.spinner("🔄 Fetching and converting URL..."):
+                    try:
+                        md = MarkItDown()
+                        result = md.convert(url)
+                        
+                        # Generate a filename from the URL or title
+                        filename = "webpage.md"
+                        if result.title:
+                            filename = f"{result.title}.md"
+                        
+                        display_result(result, filename)
+                        
+                    except Exception as e:
+                        st.error(f"❌ An error occurred during conversion: {str(e)}")
+                        st.exception(e)
+            else:
+                st.warning("Please enter a valid URL.")
+
+def display_result(result, original_filename):
+    st.success("✅ Conversion successful!")
+    
+    # Display preview
+    with st.expander("Preview Markdown Content"):
+        st.markdown(result.text_content)
+    
+    # Prepare for download
+    output_filename = os.path.splitext(original_filename)[0] + ".md"
+    
+    st.download_button(
+        label="📥 Download Markdown File",
+        data=result.text_content,
+        file_name=output_filename,
+        mime="text/markdown",
+    )
 
     st.markdown("---")
     st.caption("Powered by [MarkItDown](https://github.com/microsoft/markitdown)")
