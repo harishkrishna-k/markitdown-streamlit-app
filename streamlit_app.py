@@ -45,14 +45,13 @@ st.markdown("""
 
 def main():
     st.title("📝 MarkItDown")
-    st.subheader("Convert documents to Markdown")
+    st.subheader("Convert any document to Markdown")
     
-    # Restrict file types to PDF, Word, Excel, and PPT
-    allowed_types = ["pdf", "docx", "xlsx", "xls", "pptx"]
+    st.info("Supported formats: PDF, Word, Excel, PowerPoint, HTML, ZIP, Images, Audio, and more.")
     
     uploaded_file = st.file_uploader(
-        "Upload a document (PDF, Word, Excel, or PowerPoint)", 
-        type=allowed_types,
+        "Upload a file to convert", 
+        type=None,
         accept_multiple_files=False
     )
 
