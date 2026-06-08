@@ -1,4 +1,5 @@
 streamlit
+./packages/markitdown[all]
 beautifulsoup4
 requests
 markdownify
