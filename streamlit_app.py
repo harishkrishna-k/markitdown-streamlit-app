@@ -92,11 +92,15 @@ def main():
                         import requests
                         session = requests.Session()
                         session.headers.update({
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
                             "Accept-Language": "en-US,en;q=0.9",
+                            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
                         })
+                        
                         md = MarkItDown(requests_session=session)
-                        result = md.convert(url)
+                        # Force the original URL to be preserved even if redirected
+                        stream_info = StreamInfo(url=url)
+                        result = md.convert(url, stream_info=stream_info)
                         
                         # Generate a filename from the URL or title
                         filename = "webpage.md"
