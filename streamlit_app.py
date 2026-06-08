@@ -56,6 +56,25 @@ def main():
     st.title("📝 MarkItDown")
     st.subheader("Convert any document or webpage to Markdown")
     
+    # Sidebar for session-based cookies
+    with st.sidebar:
+        st.header("🔧 Settings")
+        ui_cookies = st.text_area(
+            "YouTube Cookies (Netscape format)",
+            help="Paste the content of your cookies.txt here to bypass YouTube's '429 Too Many Requests' block.",
+            height=250
+        )
+        if ui_cookies:
+            st.success("✅ Session cookies loaded")
+            if st.button("Clear Cookies"):
+                st.rerun()
+        
+        st.markdown("---")
+        st.markdown("### How to get cookies?")
+        st.markdown("1. Install [Get cookies.txt](https://chrome.google.com/webstore/detail/get-cookiestxt-locally/ccmclkhjbdinkhpdeadmjeidkhobhcmo) extension.")
+        st.markdown("2. Go to YouTube.com.")
+        st.markdown("3. Export cookies and paste the text here.")
+
     st.info("Supported: PDF, Word, Excel, PowerPoint, HTML, ZIP, Images, Audio, and Web URLs.")
     
     tab1, tab2 = st.tabs(["📁 Upload File", "🌐 Convert URL"])
@@ -77,6 +96,23 @@ def main():
                             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
                             "Accept-Language": "en-US,en;q=0.9",
                         })
+                        
+                        # Load cookies if available
+                        cookies_path = None
+                        cookie_content = ui_cookies if ui_cookies else st.secrets.get("YOUTUBE_COOKIES")
+                        if cookie_content:
+                            with open("temp_cookies.txt", "w") as f:
+                                f.write(cookie_content)
+                            cookies_path = "temp_cookies.txt"
+                            try:
+                                for line in cookie_content.split('\n'):
+                                    if not line.startswith('#') and line.strip():
+                                        parts = line.split('\t')
+                                        if len(parts) >= 7:
+                                            session.cookies.set(parts[5], parts[6], domain=parts[0], path=parts[2])
+                            except:
+                                pass
+                        
                         md = MarkItDown(requests_session=session)
                         uploaded_file.seek(0)
                         
@@ -107,13 +143,11 @@ def main():
                         
                         # Load cookies if available
                         cookies_path = None
-                        if "YOUTUBE_COOKIES" in st.secrets:
-                            cookie_content = st.secrets["YOUTUBE_COOKIES"]
+                        cookie_content = ui_cookies if ui_cookies else st.secrets.get("YOUTUBE_COOKIES")
+                        if cookie_content:
                             with open("temp_cookies.txt", "w") as f:
                                 f.write(cookie_content)
                             cookies_path = "temp_cookies.txt"
-                            
-                            # Also apply to the main session for metadata fetching
                             try:
                                 for line in cookie_content.split('\n'):
                                     if not line.startswith('#') and line.strip():
@@ -121,7 +155,7 @@ def main():
                                         if len(parts) >= 7:
                                             session.cookies.set(parts[5], parts[6], domain=parts[0], path=parts[2])
                             except:
-                                pass # Fallback if cookie parsing fails
+                                pass
                         
                         md = MarkItDown(requests_session=session)
                         stream_info = StreamInfo(url=url)
@@ -161,7 +195,7 @@ def main():
                                 except Exception as yt_err:
                                     if "429" in str(yt_err):
                                         st.error("⚠️ YouTube is rate-limiting this server (Error 429).")
-                                        st.info("💡 **Fix:** Add your YouTube cookies to the app Secrets to bypass this block. [Learn how](https://github.com/jdepoix/youtube-transcript-api#cookies)")
+                                        st.info("💡 **Fix:** Paste your YouTube cookies into the sidebar to bypass this block.")
                                     else:
                                         st.warning(f"Note: Could not fetch transcript: {str(yt_err)}")
                         
