@@ -131,7 +131,19 @@ def main():
                                             video_id = params["v"][0]
                                     
                                     if video_id:
-                                        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+                                        # Support for cookies to bypass 429/blocked requests
+                                        cookies_path = "youtube_cookies.txt"
+                                        # Also check Streamlit secrets for cookie content
+                                        if "YOUTUBE_COOKIES" in st.secrets:
+                                            with open("temp_cookies.txt", "w") as f:
+                                                f.write(st.secrets["YOUTUBE_COOKIES"])
+                                            cookies_path = "temp_cookies.txt"
+                                        
+                                        if os.path.exists(cookies_path):
+                                            transcript = YouTubeTranscriptApi.get_transcript(video_id, cookies=cookies_path)
+                                        else:
+                                            transcript = YouTubeTranscriptApi.get_transcript(video_id)
+                                            
                                         transcript_text = "\n".join([f"[{time_format(t['start'])}] {t['text']}" for t in transcript])
                                         
                                         if result.text_content.strip() == "# YouTube Video":
@@ -139,7 +151,11 @@ def main():
                                              
                                         result.text_content += f"\n\n### Transcript\n{transcript_text}"
                                 except Exception as yt_err:
-                                    st.warning(f"Note: Could not fetch transcript: {str(yt_err)}")
+                                    if "429" in str(yt_err):
+                                        st.error("⚠️ YouTube is rate-limiting this server (Error 429).")
+                                        st.info("💡 **Tip:** This happens because many people share the same Streamlit Cloud IP. To fix this, you can add your YouTube cookies to the app settings. [Learn how](https://github.com/jdepoix/youtube-transcript-api#cookies)")
+                                    else:
+                                        st.warning(f"Note: Could not fetch transcript: {str(yt_err)}")
                         
                         # Generate a filename
                         filename = "webpage.md"
