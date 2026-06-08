@@ -96,18 +96,44 @@ def main():
                             "Accept-Language": "en-US,en;q=0.9",
                             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
                         })
-                        # Add consent cookie for YouTube
-                        session.cookies.set("CONSENT", "YES+cb.20210328-17-p0.en+FX+410", domain=".youtube.com")
+                        # Add common consent cookies
+                        session.cookies.set("CONSENT", "PENDING+999", domain=".youtube.com")
+                        session.cookies.set("SOCS", "CAESEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg", domain=".youtube.com")
                         
                         md = MarkItDown(requests_session=session)
-                        # Force the original URL to be preserved even if redirected
+                        # Force the original URL to be preserved
                         stream_info = StreamInfo(url=url)
                         result = md.convert(url, stream_info=stream_info)
+                        
+                        # Fallback for YouTube transcripts if markitdown's built-in fetcher was blocked
+                        if "youtube.com/watch" in url or "youtu.be/" in url:
+                            if "### Transcript" not in result.text_content:
+                                try:
+                                    from youtube_transcript_api import YouTubeTranscriptApi
+                                    from urllib.parse import urlparse, parse_qs
+                                    
+                                    video_id = None
+                                    if "youtu.be/" in url:
+                                        video_id = url.split("/")[-1].split("?")[0]
+                                    else:
+                                        parsed_url = urlparse(url)
+                                        params = parse_qs(parsed_url.query)
+                                        if "v" in params:
+                                            video_id = params["v"][0]
+                                    
+                                    if video_id:
+                                        transcript = YouTubeTranscriptApi.get_transcript(video_id)
+                                        transcript_text = " ".join([t['text'] for t in transcript])
+                                        result.text_content += f"\n\n### Transcript (Direct Fetch)\n{transcript_text}"
+                                except Exception as yt_err:
+                                    st.warning(f"Note: Could not fetch transcript directly: {str(yt_err)}")
                         
                         # Generate a filename from the URL or title
                         filename = "webpage.md"
                         if result.title:
                             filename = f"{result.title}.md"
+                        elif "youtube.com" in url or "youtu.be" in url:
+                            filename = "youtube_video.md"
                         
                         display_result(result, filename)
                         
