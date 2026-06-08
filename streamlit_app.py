@@ -105,17 +105,33 @@ def main():
                             "Accept-Language": "en-US,en;q=0.9",
                         })
                         
+                        # Load cookies if available
+                        cookies_path = None
+                        if "YOUTUBE_COOKIES" in st.secrets:
+                            cookie_content = st.secrets["YOUTUBE_COOKIES"]
+                            with open("temp_cookies.txt", "w") as f:
+                                f.write(cookie_content)
+                            cookies_path = "temp_cookies.txt"
+                            
+                            # Also apply to the main session for metadata fetching
+                            try:
+                                for line in cookie_content.split('\n'):
+                                    if not line.startswith('#') and line.strip():
+                                        parts = line.split('\t')
+                                        if len(parts) >= 7:
+                                            session.cookies.set(parts[5], parts[6], domain=parts[0], path=parts[2])
+                            except:
+                                pass # Fallback if cookie parsing fails
+                        
                         md = MarkItDown(requests_session=session)
                         stream_info = StreamInfo(url=url)
                         result = md.convert(url, stream_info=stream_info)
                         
                         # Aggressive YouTube Handling
                         if "youtube.com/watch" in url or "youtu.be/" in url:
-                            # 1. Clean up "Consent/About" text if it's the only thing returned
                             if "AboutPressCopyright" in result.text_content or result.text_content.strip() == "YouTube":
                                 result.text_content = "# YouTube Video\n"
                             
-                            # 2. Proactively fetch transcript if not already present
                             if "### Transcript" not in result.text_content:
                                 try:
                                     from youtube_transcript_api import YouTubeTranscriptApi
@@ -131,15 +147,7 @@ def main():
                                             video_id = params["v"][0]
                                     
                                     if video_id:
-                                        # Support for cookies to bypass 429/blocked requests
-                                        cookies_path = "youtube_cookies.txt"
-                                        # Also check Streamlit secrets for cookie content
-                                        if "YOUTUBE_COOKIES" in st.secrets:
-                                            with open("temp_cookies.txt", "w") as f:
-                                                f.write(st.secrets["YOUTUBE_COOKIES"])
-                                            cookies_path = "temp_cookies.txt"
-                                        
-                                        if os.path.exists(cookies_path):
+                                        if cookies_path:
                                             transcript = YouTubeTranscriptApi.get_transcript(video_id, cookies=cookies_path)
                                         else:
                                             transcript = YouTubeTranscriptApi.get_transcript(video_id)
@@ -153,7 +161,7 @@ def main():
                                 except Exception as yt_err:
                                     if "429" in str(yt_err):
                                         st.error("⚠️ YouTube is rate-limiting this server (Error 429).")
-                                        st.info("💡 **Tip:** This happens because many people share the same Streamlit Cloud IP. To fix this, you can add your YouTube cookies to the app settings. [Learn how](https://github.com/jdepoix/youtube-transcript-api#cookies)")
+                                        st.info("💡 **Fix:** Add your YouTube cookies to the app Secrets to bypass this block. [Learn how](https://github.com/jdepoix/youtube-transcript-api#cookies)")
                                     else:
                                         st.warning(f"Note: Could not fetch transcript: {str(yt_err)}")
                         
