@@ -10,6 +10,15 @@ if os.path.exists(package_path) and package_path not in sys.path:
     sys.path.insert(0, package_path)
 
 from markitdown import MarkItDown, StreamInfo
+
+def time_format(seconds):
+    m, s = divmod(int(seconds), 60)
+    h, m = divmod(m, 60)
+    if h > 0:
+        return f'{h:d}:{m:02d}:{s:02d}'
+    return f'{m:d}:{s:02d}'
+
+# Set page config
 st.set_page_config(
     page_title="MarkItDown Converter",
     page_icon="📝",
@@ -65,7 +74,7 @@ def main():
                         import requests
                         session = requests.Session()
                         session.headers.update({
-                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
                             "Accept-Language": "en-US,en;q=0.9",
                         })
                         md = MarkItDown(requests_session=session)
@@ -140,13 +149,6 @@ def main():
                             filename = "youtube_video.md"
                         
                         display_result(result, filename)
-
-def time_format(seconds):
-    m, s = divmod(int(seconds), 60)
-    h, m = divmod(m, 60)
-    if h > 0:
-        return f'{h:d}:{m:02d}:{s:02d}'
-    return f'{m:d}:{s:02d}'
                         
                     except Exception as e:
                         st.error(f"❌ An error occurred during conversion: {str(e)}")
