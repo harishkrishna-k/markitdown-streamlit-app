@@ -62,7 +62,13 @@ def main():
             if st.button("Convert File"):
                 with st.spinner("🔄 Converting file..."):
                     try:
-                        md = MarkItDown()
+                        import requests
+                        session = requests.Session()
+                        session.headers.update({
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                            "Accept-Language": "en-US,en;q=0.9",
+                        })
+                        md = MarkItDown(requests_session=session)
                         uploaded_file.seek(0)
                         
                         stream_info = StreamInfo(
@@ -83,7 +89,13 @@ def main():
             if url:
                 with st.spinner("🔄 Fetching and converting URL..."):
                     try:
-                        md = MarkItDown()
+                        import requests
+                        session = requests.Session()
+                        session.headers.update({
+                            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                            "Accept-Language": "en-US,en;q=0.9",
+                        })
+                        md = MarkItDown(requests_session=session)
                         result = md.convert(url)
                         
                         # Generate a filename from the URL or title
