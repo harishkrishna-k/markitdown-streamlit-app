@@ -96,6 +96,8 @@ def main():
                             "Accept-Language": "en-US,en;q=0.9",
                             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
                         })
+                        # Add consent cookie for YouTube
+                        session.cookies.set("CONSENT", "YES+cb.20210328-17-p0.en+FX+410", domain=".youtube.com")
                         
                         md = MarkItDown(requests_session=session)
                         # Force the original URL to be preserved even if redirected
