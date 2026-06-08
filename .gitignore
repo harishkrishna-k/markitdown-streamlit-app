@@ -166,3 +166,8 @@ cython_debug/
 src/.DS_Store
 .DS_Store
 .cursorrules
+
+# YouTube temporary files
+temp_cookies.txt
+youtube_cookies.txt
+
