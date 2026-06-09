@@ -61,12 +61,9 @@ def main():
         </div>
     """, unsafe_allow_html=True)
     
-    # --- Check for URL in state for dynamic help ---
-    # We use a dummy input to detect if the user is typing a YT URL
-    
     # --- Sidebar for Advanced Settings ---
     with st.sidebar:
-        st.header("🔧 Settings & Auth")
+        st.header("🔧 Settings")
         
         st.markdown("### Supported Formats")
         st.markdown("""
@@ -78,22 +75,17 @@ def main():
         """)
 
         st.markdown("---")
-        with st.expander("🔑 YouTube Authentication", expanded=False):
-            st.caption("Use this if you encounter 'blocking' errors on YouTube.")
+        with st.expander("🔑 Authentication (Optional)", expanded=False):
+            st.caption("Paste cookies here if a website (like YouTube) blocks the conversion.")
             ui_cookies = st.text_area(
-                "Paste Cookies.txt content",
-                help="Netscape format cookies from YouTube.",
+                "Cookies (Netscape format)",
+                help="Paste the content of your cookies.txt here.",
                 height=150
             )
             if ui_cookies:
                 st.success("Session cookies loaded")
                 if st.button("Clear Session"):
                     st.rerun()
-            
-            st.markdown("---")
-            st.markdown("**How to get cookies?**")
-            st.markdown("1. Install [Get cookies.txt](https://chrome.google.com/webstore/detail/get-cookiestxt-locally/ccmclkhjbdinkhpdeadmjeidkhobhcmo)")
-            st.markdown("2. Export from YouTube.com and paste here.")
 
     # --- Main Interface ---
     tab1, tab2 = st.tabs(["📁 Upload Document", "🌐 Convert Webpage"])
@@ -115,12 +107,12 @@ def main():
             with col1:
                 st.write(f"**Ready to convert:** `{uploaded_file.name}`")
             with col2:
-                if st.button("🚀 Convert Now", type="primary", use_container_width=True):
+                if st.button("🚀 Convert Now", type="primary", key="btn_file", use_container_width=True):
                     process_conversion(uploaded_file, ui_cookies)
 
     with tab2:
         st.markdown("### 🌐 Enter a URL")
-        st.caption("Paste a link to a blog post, article, or YouTube video.")
+        st.caption("Paste a link to any webpage or article.")
         
         url_input = st.text_input(
             "URL",
@@ -128,34 +120,24 @@ def main():
             label_visibility="collapsed"
         )
         
-        # YouTube Preview
-        is_yt = "youtube.com" in url_input or "youtu.be" in url_input
-        if is_yt and url_input:
-            try:
-                st.video(url_input)
-                st.info("🎥 **YouTube detected.** If the conversion fails, please use the **YouTube Authentication** in the sidebar.")
-            except: pass
-
         # Example buttons
         cols = st.columns([1, 1, 1, 2])
         with cols[0]:
             if st.button("💡 Wiki Example"):
                 url_input = "https://en.wikipedia.org/wiki/Markdown"
-                st.rerun()
         with cols[1]:
-            if st.button("🎥 YouTube Example"):
+            if st.button("🎥 Video Example"):
                 url_input = "https://www.youtube.com/watch?v=UkzKW1jsWqk"
-                st.rerun()
         
         st.markdown("---")
-        if st.button("🔍 Fetch and Convert", type="primary", use_container_width=True):
+        if st.button("🔍 Fetch and Convert", type="primary", key="btn_url", use_container_width=True):
             if url_input:
                 process_url(url_input, ui_cookies)
             else:
                 st.warning("Please enter a URL first!")
 
 def process_conversion(uploaded_file, ui_cookies):
-    with st.spinner("⏳ Analyzing and converting your document..."):
+    with st.spinner("⏳ Converting document..."):
         try:
             import requests
             session = requests.Session()
@@ -188,12 +170,12 @@ def process_conversion(uploaded_file, ui_cookies):
             st.error(f"❌ Conversion failed: {str(e)}")
 
 def process_url(url, ui_cookies):
-    with st.spinner("🌐 Fetching webpage content..."):
+    with st.spinner("🌐 Fetching content..."):
         try:
             import requests
             from urllib.parse import urlparse, parse_qs
             
-            # --- 1. Normalize YouTube URLs ---
+            # Normalize YouTube URLs for backend processing
             is_youtube = False
             video_id = None
             if "youtube.com" in url or "youtu.be" in url:
@@ -205,11 +187,9 @@ def process_url(url, ui_cookies):
                     params = parse_qs(parsed_url.query)
                     if "v" in params:
                         video_id = params["v"][0]
-                
                 if video_id:
                     url = f"https://www.youtube.com/watch?v={video_id}"
 
-            # --- 2. Setup Session & Cookies ---
             session = requests.Session()
             session.headers.update({
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
@@ -230,12 +210,11 @@ def process_url(url, ui_cookies):
                                 session.cookies.set(parts[5], parts[6], domain=parts[0], path=parts[2])
                 except: pass
             
-            # --- 3. Primary Conversion ---
             md = MarkItDown(requests_session=session)
             stream_info = StreamInfo(url=url)
             result = md.convert(url, stream_info=stream_info)
             
-            # --- 4. YouTube Enhancement ---
+            # Backend handling for YouTube transcripts
             if is_youtube:
                 if "AboutPressCopyright" in result.text_content or result.text_content.strip() == "YouTube":
                     result.text_content = "# YouTube Video\n"
@@ -255,14 +234,10 @@ def process_url(url, ui_cookies):
                     except Exception as yt_err:
                         err_msg = str(yt_err)
                         if "429" in err_msg or "no element found" in err_msg:
-                            st.error("⚠️ YouTube is blocking the cloud server.")
-                            col1, col2 = st.columns([1, 1])
-                            with col1:
-                                st.link_button("🌐 Open Video", url, use_container_width=True)
-                            with col2:
-                                st.caption("Paste cookies in sidebar to fix.")
+                            st.error("⚠️ The website is blocking this request.")
+                            st.info("💡 **Fix:** Paste your cookies into the sidebar Authentication section to bypass.")
                         else:
-                            st.warning(f"Transcript fetch note: {err_msg}")
+                            st.warning(f"Technical note: {err_msg}")
             
             filename = "webpage.md"
             if result.title and result.title != "YouTube":
@@ -278,7 +253,7 @@ def process_url(url, ui_cookies):
 def display_result(result, original_filename):
     st.markdown("---")
     st.balloons()
-    st.success("✅ **Great success!** Your file is ready.")
+    st.success("✅ **Conversion complete!**")
     
     output_filename = os.path.splitext(original_filename)[0] + ".md"
     
