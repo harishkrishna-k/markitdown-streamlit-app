@@ -61,35 +61,39 @@ def main():
         </div>
     """, unsafe_allow_html=True)
     
+    # --- Check for URL in state for dynamic help ---
+    # We use a dummy input to detect if the user is typing a YT URL
+    
     # --- Sidebar for Advanced Settings ---
     with st.sidebar:
         st.header("🔧 Settings & Auth")
-        with st.expander("🔑 YouTube Authentication", expanded=False):
-            st.caption("Use this if you encounter 'Too Many Requests' errors on YouTube.")
-            ui_cookies = st.text_area(
-                "Paste Cookies.txt content",
-                help="Netscape format cookies from YouTube.",
-                height=150
-            )
-            if ui_cookies:
-                st.success("Session cookies active")
-                if st.button("Reset Session"):
-                    st.rerun()
-            
-            st.markdown("---")
-            st.markdown("**How to get cookies?**")
-            st.markdown("1. Install [Get cookies.txt](https://chrome.google.com/webstore/detail/get-cookiestxt-locally/ccmclkhjbdinkhpdeadmjeidkhobhcmo)")
-            st.markdown("2. Export from YouTube.com and paste here.")
-
-        st.markdown("---")
+        
         st.markdown("### Supported Formats")
         st.markdown("""
         - 📄 **Documents:** PDF, Word, PPT
         - 📊 **Data:** Excel, CSV
         - 🌐 **Web:** HTML, URLs
         - 📦 **Archives:** ZIP
-        - 🎵 **Media:** MP3, WAV (Transcription)
+        - 🎵 **Media:** MP3, WAV
         """)
+
+        st.markdown("---")
+        with st.expander("🔑 YouTube Authentication", expanded=False):
+            st.caption("Use this if you encounter 'blocking' errors on YouTube.")
+            ui_cookies = st.text_area(
+                "Paste Cookies.txt content",
+                help="Netscape format cookies from YouTube.",
+                height=150
+            )
+            if ui_cookies:
+                st.success("Session cookies loaded")
+                if st.button("Clear Session"):
+                    st.rerun()
+            
+            st.markdown("---")
+            st.markdown("**How to get cookies?**")
+            st.markdown("1. Install [Get cookies.txt](https://chrome.google.com/webstore/detail/get-cookiestxt-locally/ccmclkhjbdinkhpdeadmjeidkhobhcmo)")
+            st.markdown("2. Export from YouTube.com and paste here.")
 
     # --- Main Interface ---
     tab1, tab2 = st.tabs(["📁 Upload Document", "🌐 Convert Webpage"])
@@ -124,14 +128,24 @@ def main():
             label_visibility="collapsed"
         )
         
+        # YouTube Preview
+        is_yt = "youtube.com" in url_input or "youtu.be" in url_input
+        if is_yt and url_input:
+            try:
+                st.video(url_input)
+                st.info("🎥 **YouTube detected.** If the conversion fails, please use the **YouTube Authentication** in the sidebar.")
+            except: pass
+
         # Example buttons
         cols = st.columns([1, 1, 1, 2])
         with cols[0]:
             if st.button("💡 Wiki Example"):
                 url_input = "https://en.wikipedia.org/wiki/Markdown"
+                st.rerun()
         with cols[1]:
             if st.button("🎥 YouTube Example"):
                 url_input = "https://www.youtube.com/watch?v=UkzKW1jsWqk"
+                st.rerun()
         
         st.markdown("---")
         if st.button("🔍 Fetch and Convert", type="primary", use_container_width=True):
@@ -177,7 +191,7 @@ def process_url(url, ui_cookies):
     with st.spinner("🌐 Fetching webpage content..."):
         try:
             import requests
-            from urllib.parse import urlparse, parse_qs, urlunparse
+            from urllib.parse import urlparse, parse_qs
             
             # --- 1. Normalize YouTube URLs ---
             is_youtube = False
@@ -192,7 +206,6 @@ def process_url(url, ui_cookies):
                     if "v" in params:
                         video_id = params["v"][0]
                 
-                # If we have a video_id, reconstruct a standard URL for MarkItDown compatibility
                 if video_id:
                     url = f"https://www.youtube.com/watch?v={video_id}"
 
@@ -222,36 +235,35 @@ def process_url(url, ui_cookies):
             stream_info = StreamInfo(url=url)
             result = md.convert(url, stream_info=stream_info)
             
-            # --- 4. YouTube-Specific Enhancement (using youtube-transcript-api) ---
+            # --- 4. YouTube Enhancement ---
             if is_youtube:
-                # Clean up "Consent/About" text if it's the only thing returned
                 if "AboutPressCopyright" in result.text_content or result.text_content.strip() == "YouTube":
                     result.text_content = "# YouTube Video\n"
                 
                 if "### Transcript" not in result.text_content and video_id:
                     try:
                         from youtube_transcript_api import YouTubeTranscriptApi
-                        
                         if cookies_path:
                             transcript = YouTubeTranscriptApi.get_transcript(video_id, cookies=cookies_path)
                         else:
                             transcript = YouTubeTranscriptApi.get_transcript(video_id)
                         
                         transcript_text = "\n".join([f"[{time_format(t['start'])}] {t['text']}" for t in transcript])
-                        
                         if result.text_content.strip() == "# YouTube Video":
-                             result.text_content += f"\n(Note: Video metadata was blocked, but the transcript was successfully recovered via API.)"
-                        
+                             result.text_content += f"\n(Metadata blocked, transcript recovered via API.)"
                         result.text_content += f"\n\n### Transcript\n{transcript_text}"
                     except Exception as yt_err:
                         err_msg = str(yt_err)
                         if "429" in err_msg or "no element found" in err_msg:
-                            st.error("⚠️ YouTube is blocking this request.")
-                            st.info("💡 **Fix:** This is common on cloud servers. Paste your **YouTube Cookies** into the sidebar Settings to bypass this block.")
+                            st.error("⚠️ YouTube is blocking the cloud server.")
+                            col1, col2 = st.columns([1, 1])
+                            with col1:
+                                st.link_button("🌐 Open Video", url, use_container_width=True)
+                            with col2:
+                                st.caption("Paste cookies in sidebar to fix.")
                         else:
                             st.warning(f"Transcript fetch note: {err_msg}")
             
-            # --- 5. Display Result ---
             filename = "webpage.md"
             if result.title and result.title != "YouTube":
                 filename = f"{result.title}.md"
@@ -263,7 +275,6 @@ def process_url(url, ui_cookies):
         except Exception as e:
             st.error(f"❌ URL conversion failed: {str(e)}")
 
-
 def display_result(result, original_filename):
     st.markdown("---")
     st.balloons()
@@ -273,7 +284,7 @@ def display_result(result, original_filename):
     
     col1, col2 = st.columns([2, 1])
     with col1:
-        with st.expander("🔍 Preview Markdown"):
+        with st.expander("🔍 Preview Markdown", expanded=True):
             st.markdown(result.text_content)
     with col2:
         st.download_button(
@@ -290,4 +301,3 @@ def display_result(result, original_filename):
 
 if __name__ == "__main__":
     main()
-
