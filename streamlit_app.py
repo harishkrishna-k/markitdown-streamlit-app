@@ -177,6 +177,26 @@ def process_url(url, ui_cookies):
     with st.spinner("🌐 Fetching webpage content..."):
         try:
             import requests
+            from urllib.parse import urlparse, parse_qs, urlunparse
+            
+            # --- 1. Normalize YouTube URLs ---
+            is_youtube = False
+            video_id = None
+            if "youtube.com" in url or "youtu.be" in url:
+                is_youtube = True
+                if "youtu.be/" in url:
+                    video_id = url.split("/")[-1].split("?")[0]
+                else:
+                    parsed_url = urlparse(url)
+                    params = parse_qs(parsed_url.query)
+                    if "v" in params:
+                        video_id = params["v"][0]
+                
+                # If we have a video_id, reconstruct a standard URL for MarkItDown compatibility
+                if video_id:
+                    url = f"https://www.youtube.com/watch?v={video_id}"
+
+            # --- 2. Setup Session & Cookies ---
             session = requests.Session()
             session.headers.update({
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
@@ -197,54 +217,51 @@ def process_url(url, ui_cookies):
                                 session.cookies.set(parts[5], parts[6], domain=parts[0], path=parts[2])
                 except: pass
             
+            # --- 3. Primary Conversion ---
             md = MarkItDown(requests_session=session)
             stream_info = StreamInfo(url=url)
             result = md.convert(url, stream_info=stream_info)
             
-            # YouTube recovery
-            if "youtube.com/watch" in url or "youtu.be/" in url:
+            # --- 4. YouTube-Specific Enhancement (using youtube-transcript-api) ---
+            if is_youtube:
+                # Clean up "Consent/About" text if it's the only thing returned
                 if "AboutPressCopyright" in result.text_content or result.text_content.strip() == "YouTube":
                     result.text_content = "# YouTube Video\n"
                 
-                if "### Transcript" not in result.text_content:
+                if "### Transcript" not in result.text_content and video_id:
                     try:
                         from youtube_transcript_api import YouTubeTranscriptApi
-                        from urllib.parse import urlparse, parse_qs
-                        video_id = None
-                        if "youtu.be/" in url:
-                            video_id = url.split("/")[-1].split("?")[0]
-                        else:
-                            parsed_url = urlparse(url)
-                            params = parse_qs(parsed_url.query)
-                            if "v" in params: video_id = params["v"][0]
                         
-                        if video_id:
-                            if cookies_path:
-                                transcript = YouTubeTranscriptApi.get_transcript(video_id, cookies=cookies_path)
-                            else:
-                                transcript = YouTubeTranscriptApi.get_transcript(video_id)
-                            
-                            transcript_text = "\n".join([f"[{time_format(t['start'])}] {t['text']}" for t in transcript])
-                            if result.text_content.strip() == "# YouTube Video":
-                                 result.text_content += f"\n(Metadata blocked by YouTube, but transcript was recovered.)"
-                            result.text_content += f"\n\n### Transcript\n{transcript_text}"
+                        if cookies_path:
+                            transcript = YouTubeTranscriptApi.get_transcript(video_id, cookies=cookies_path)
+                        else:
+                            transcript = YouTubeTranscriptApi.get_transcript(video_id)
+                        
+                        transcript_text = "\n".join([f"[{time_format(t['start'])}] {t['text']}" for t in transcript])
+                        
+                        if result.text_content.strip() == "# YouTube Video":
+                             result.text_content += f"\n(Note: Video metadata was blocked, but the transcript was successfully recovered via API.)"
+                        
+                        result.text_content += f"\n\n### Transcript\n{transcript_text}"
                     except Exception as yt_err:
                         if "429" in str(yt_err):
-                            st.error("⚠️ YouTube is rate-limiting this request.")
-                            st.info("💡 **Fix:** Paste your YouTube cookies into the sidebar Settings.")
+                            st.error("⚠️ YouTube is rate-limiting this request (Error 429).")
+                            st.info("💡 **Fix:** Paste your YouTube cookies into the sidebar Settings to authenticate.")
                         else:
-                            st.warning(f"Transcript note: {str(yt_err)}")
+                            st.warning(f"Transcript fetch note: {str(yt_err)}")
             
+            # --- 5. Display Result ---
             filename = "webpage.md"
             if result.title and result.title != "YouTube":
                 filename = f"{result.title}.md"
-            elif "youtube.com" in url or "youtu.be" in url:
+            elif is_youtube:
                 filename = "youtube_video.md"
             
             display_result(result, filename)
             
         except Exception as e:
             st.error(f"❌ URL conversion failed: {str(e)}")
+
 
 def display_result(result, original_filename):
     st.markdown("---")
