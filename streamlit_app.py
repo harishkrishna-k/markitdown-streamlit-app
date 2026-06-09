@@ -69,14 +69,14 @@ def main():
         st.markdown("""
         - 📄 **Documents:** PDF, Word, PPT
         - 📊 **Data:** Excel, CSV
-        - 🌐 **Web:** HTML, URLs
+        - 🌐 **Web:** HTML, Articles
         - 📦 **Archives:** ZIP
-        - 🎵 **Media:** MP3, WAV
+        - 🎵 **Audio:** MP3, WAV
         """)
 
         st.markdown("---")
         with st.expander("🔑 Authentication (Optional)", expanded=False):
-            st.caption("Paste cookies here if a website (like YouTube) blocks the conversion.")
+            st.caption("Paste cookies here if a website blocks the conversion.")
             ui_cookies = st.text_area(
                 "Cookies (Netscape format)",
                 help="Paste the content of your cookies.txt here.",
@@ -112,7 +112,7 @@ def main():
 
     with tab2:
         st.markdown("### 🌐 Enter a URL")
-        st.caption("Paste a link to any webpage or article.")
+        st.caption("Paste a link to any webpage or article (social media/video links not supported).")
         
         url_input = st.text_input(
             "URL",
@@ -120,19 +120,15 @@ def main():
             label_visibility="collapsed"
         )
         
-        # Example buttons
-        cols = st.columns([1, 1, 1, 2])
-        with cols[0]:
-            if st.button("💡 Wiki Example"):
-                url_input = "https://en.wikipedia.org/wiki/Markdown"
-        with cols[1]:
-            if st.button("🎥 Video Example"):
-                url_input = "https://www.youtube.com/watch?v=UkzKW1jsWqk"
-        
         st.markdown("---")
         if st.button("🔍 Fetch and Convert", type="primary", key="btn_url", use_container_width=True):
             if url_input:
-                process_url(url_input, ui_cookies)
+                # Check for unsupported media domains
+                unsupported_domains = ["youtube.com", "youtu.be", "instagram.com", "tiktok.com", "facebook.com", "twitter.com", "x.com"]
+                if any(domain in url_input.lower() for domain in unsupported_domains):
+                    st.error("🚫 **Unsupported Link:** Media-heavy platforms (YouTube, Instagram, etc.) are not supported for scraping. Please use a text-based article or blog post URL.")
+                else:
+                    process_url(url_input, ui_cookies)
             else:
                 st.warning("Please enter a URL first!")
 
@@ -173,35 +169,14 @@ def process_url(url, ui_cookies):
     with st.spinner("🌐 Fetching content..."):
         try:
             import requests
-            from urllib.parse import urlparse, parse_qs
-            
-            # Normalize YouTube URLs for backend processing
-            is_youtube = False
-            video_id = None
-            if "youtube.com" in url or "youtu.be" in url:
-                is_youtube = True
-                if "youtu.be/" in url:
-                    video_id = url.split("/")[-1].split("?")[0]
-                else:
-                    parsed_url = urlparse(url)
-                    params = parse_qs(parsed_url.query)
-                    if "v" in params:
-                        video_id = params["v"][0]
-                if video_id:
-                    url = f"https://www.youtube.com/watch?v={video_id}"
-
             session = requests.Session()
             session.headers.update({
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36",
                 "Accept-Language": "en-US,en;q=0.9",
             })
             
-            cookies_path = None
             cookie_content = ui_cookies if ui_cookies else st.secrets.get("YOUTUBE_COOKIES")
             if cookie_content:
-                with open("temp_cookies.txt", "w") as f:
-                    f.write(cookie_content)
-                cookies_path = "temp_cookies.txt"
                 try:
                     for line in cookie_content.split('\n'):
                         if not line.startswith('#') and line.strip():
@@ -214,38 +189,7 @@ def process_url(url, ui_cookies):
             stream_info = StreamInfo(url=url)
             result = md.convert(url, stream_info=stream_info)
             
-            # Backend handling for YouTube transcripts
-            if is_youtube:
-                if "AboutPressCopyright" in result.text_content or result.text_content.strip() == "YouTube":
-                    result.text_content = "# YouTube Video\n"
-                
-                if "### Transcript" not in result.text_content and video_id:
-                    try:
-                        from youtube_transcript_api import YouTubeTranscriptApi
-                        if cookies_path:
-                            transcript = YouTubeTranscriptApi.get_transcript(video_id, cookies=cookies_path)
-                        else:
-                            transcript = YouTubeTranscriptApi.get_transcript(video_id)
-                        
-                        transcript_text = "\n".join([f"[{time_format(t['start'])}] {t['text']}" for t in transcript])
-                        if result.text_content.strip() == "# YouTube Video":
-                             result.text_content += f"\n(Metadata blocked, transcript recovered via API.)"
-                        result.text_content += f"\n\n### Transcript\n{transcript_text}"
-                    except Exception as yt_err:
-                        err_msg = str(yt_err)
-                        if "429" in err_msg or "no element found" in err_msg:
-                            st.error("⚠️ The website is blocking this request.")
-                            st.info("💡 **Fix:** Paste your cookies into the sidebar Authentication section to bypass.")
-                        else:
-                            st.warning(f"Technical note: {err_msg}")
-            
-            filename = "webpage.md"
-            if result.title and result.title != "YouTube":
-                filename = f"{result.title}.md"
-            elif is_youtube:
-                filename = "youtube_video.md"
-            
-            display_result(result, filename)
+            display_result(result, "webpage.md")
             
         except Exception as e:
             st.error(f"❌ URL conversion failed: {str(e)}")
