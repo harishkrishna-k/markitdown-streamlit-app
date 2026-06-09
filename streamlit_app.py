@@ -244,11 +244,12 @@ def process_url(url, ui_cookies):
                         
                         result.text_content += f"\n\n### Transcript\n{transcript_text}"
                     except Exception as yt_err:
-                        if "429" in str(yt_err):
-                            st.error("⚠️ YouTube is rate-limiting this request (Error 429).")
-                            st.info("💡 **Fix:** Paste your YouTube cookies into the sidebar Settings to authenticate.")
+                        err_msg = str(yt_err)
+                        if "429" in err_msg or "no element found" in err_msg:
+                            st.error("⚠️ YouTube is blocking this request.")
+                            st.info("💡 **Fix:** This is common on cloud servers. Paste your **YouTube Cookies** into the sidebar Settings to bypass this block.")
                         else:
-                            st.warning(f"Transcript fetch note: {str(yt_err)}")
+                            st.warning(f"Transcript fetch note: {err_msg}")
             
             # --- 5. Display Result ---
             filename = "webpage.md"

@@ -17,7 +17,8 @@ pdfplumber
 olefile
 pydub
 SpeechRecognition
-youtube-transcript-api
+youtube-transcript-api>=0.6.3
 azure-identity
+
 azure-ai-documentintelligence
 azure-ai-contentunderstanding
