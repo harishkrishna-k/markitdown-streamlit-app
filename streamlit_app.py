@@ -49,10 +49,27 @@ st.markdown("""
         border-radius: 5px;
         height: 3em;
     }
+    /* Customizing the file uploader limit text */
+    [data-testid="stFileUploaderPagination"] small {
+        visibility: hidden;
+    }
+    [data-testid="stFileUploaderPagination"]::after {
+        content: "File max size 200 MB";
+        font-size: 0.8rem;
+        color: #666;
+        display: block;
+        margin-top: -1.2rem;
+    }
 </style>
 """, unsafe_allow_html=True)
 
 def main():
+    # Initialise session state for persistence across reruns
+    if "cookies_text" not in st.session_state:
+        st.session_state.cookies_text = ""
+    if "conversion_result" not in st.session_state:
+        st.session_state.conversion_result = None
+
     # --- Header Section ---
     st.markdown("""
         <div style="text-align: center; padding-bottom: 2rem;">
@@ -80,11 +97,13 @@ def main():
             ui_cookies = st.text_area(
                 "Cookies (Netscape format)",
                 help="Paste the content of your cookies.txt here.",
-                height=150
+                height=150,
+                key="cookies_text"
             )
             if ui_cookies:
                 st.success("Session cookies loaded")
                 if st.button("Clear Session"):
+                    st.session_state.cookies_text = ""
                     st.rerun()
 
     # --- Main Interface ---
@@ -132,6 +151,12 @@ def main():
             else:
                 st.warning("Please enter a URL first!")
 
+    # Display persisted conversion result across reruns
+    result_entry = st.session_state.conversion_result
+    if result_entry:
+        result, original_filename = result_entry
+        display_result(result, original_filename)
+
 def process_conversion(uploaded_file, ui_cookies):
     with st.spinner("⏳ Converting document..."):
         try:
@@ -160,7 +185,7 @@ def process_conversion(uploaded_file, ui_cookies):
             )
             
             result = md.convert(uploaded_file, stream_info=stream_info)
-            display_result(result, uploaded_file.name)
+            st.session_state.conversion_result = (result, uploaded_file.name)
             
         except Exception as e:
             st.error(f"❌ Conversion failed: {str(e)}")
@@ -188,16 +213,20 @@ def process_url(url, ui_cookies):
             md = MarkItDown(requests_session=session)
             stream_info = StreamInfo(url=url)
             result = md.convert(url, stream_info=stream_info)
-            
-            display_result(result, "webpage.md")
+            st.session_state.conversion_result = (result, "webpage.md")
             
         except Exception as e:
             st.error(f"❌ URL conversion failed: {str(e)}")
 
 def display_result(result, original_filename):
     st.markdown("---")
-    st.balloons()
-    st.success("✅ **Conversion complete!**")
+    col_success, col_dismiss = st.columns([5, 1])
+    with col_success:
+        st.success("✅ **Conversion complete!**")
+    with col_dismiss:
+        if st.button("✕", key="dismiss_result", help="Dismiss result"):
+            st.session_state.conversion_result = None
+            st.rerun()
     
     output_filename = os.path.splitext(original_filename)[0] + ".md"
     
