@@ -400,17 +400,20 @@ def display_result(result, original_filename):
                 unsafe_allow_html=False
             )
     with col2:
-        st.download_button(
-            label="📥 Download .md",
-            data=result.text_content,
-            file_name=output_filename,
-            mime="text/markdown",
-            use_container_width=True,
-            type="primary"
-        )
-        if st.button("✕ Dismiss", key="dismiss_result", use_container_width=True):
-            st.session_state.conversion_result = None
-            st.rerun()
+        sub_col1, sub_col2 = st.columns(2)
+        with sub_col1:
+            st.download_button(
+                label="📥 Download",
+                data=result.text_content,
+                file_name=output_filename,
+                mime="text/markdown",
+                use_container_width=True,
+                type="primary"
+            )
+        with sub_col2:
+            if st.button("✕ Dismiss", key="dismiss_result", use_container_width=True):
+                st.session_state.conversion_result = None
+                st.rerun()
 
     st.markdown("""
         <div style="text-align: center; padding: 2rem 0 0.5rem;">
