@@ -26,39 +26,196 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# Custom CSS for better aesthetics and hiding menu
+# Modern UI CSS
 st.markdown("""
 <style>
-    /* Hide the hamburger menu and header */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    html, body, [class*="css"] {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
     #MainMenu {visibility: hidden;}
     header {visibility: hidden;}
     footer {visibility: hidden;}
-    
-    .main {
-        background-color: #f8f9fa;
+
+    .stApp {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     }
+
+    .main > div {
+        padding-top: 1.5rem;
+    }
+
+    /* Card containers */
+    div.stTabs [data-baseweb="tab-panel"] {
+        background: rgba(255,255,255,0.75);
+        backdrop-filter: blur(12px);
+        border-radius: 16px;
+        padding: 1.8rem 2rem;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.06);
+        border: 1px solid rgba(255,255,255,0.7);
+    }
+
+    div.stTabs [role="tablist"] {
+        gap: 0.5rem;
+        background: rgba(255,255,255,0.5);
+        backdrop-filter: blur(8px);
+        padding: 0.4rem;
+        border-radius: 14px;
+        border: 1px solid rgba(255,255,255,0.6);
+        margin-bottom: 1.5rem;
+    }
+
+    div.stTabs [role="tab"] {
+        border-radius: 10px;
+        font-weight: 500;
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+        transition: all 0.2s ease;
+    }
+
+    div.stTabs [role="tab"][aria-selected="true"] {
+        background: white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    /* Buttons */
     .stButton>button {
         width: 100%;
-        border-radius: 5px;
+        border-radius: 10px;
         height: 3em;
-        background-color: #007bff;
-        color: white;
+        border: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(0,123,255,0.2);
     }
+
+    .stButton>button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 16px rgba(0,123,255,0.3);
+    }
+
+    .stButton>button:active {
+        transform: translateY(0);
+    }
+
     .stDownloadButton>button {
         width: 100%;
-        border-radius: 5px;
+        border-radius: 10px;
         height: 3em;
+        font-weight: 600;
+        border: 1px solid #e0e0e0;
+        transition: all 0.2s ease;
     }
-    /* Customizing the file uploader limit text */
+
+    .stDownloadButton>button:hover {
+        border-color: #007bff;
+        color: #007bff;
+    }
+
+    /* File uploader */
+    [data-testid="stFileUploader"] {
+        background: rgba(255,255,255,0.5);
+        border: 2px dashed #c0c0c0;
+        border-radius: 14px;
+        padding: 1rem;
+        transition: all 0.2s ease;
+    }
+
+    [data-testid="stFileUploader"]:hover {
+        border-color: #007bff;
+        background: rgba(255,255,255,0.8);
+    }
+
     [data-testid="stFileUploaderPagination"] small {
         visibility: hidden;
     }
+
     [data-testid="stFileUploaderPagination"]::after {
-        content: "File max size 200 MB";
+        content: "Max file size: 200 MB";
         font-size: 0.8rem;
-        color: #666;
+        color: #888;
         display: block;
         margin-top: -1.2rem;
+    }
+
+    /* Text input */
+    .stTextInput>div>div>input {
+        border-radius: 10px;
+        border: 1px solid #e0e0e0;
+        padding: 0.6rem 1rem;
+        font-size: 0.95rem;
+        transition: all 0.2s ease;
+        background: rgba(255,255,255,0.7);
+    }
+
+    .stTextInput>div>div>input:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+    }
+
+    /* Expander */
+    .streamlit-expanderHeader {
+        border-radius: 10px;
+        font-weight: 500;
+        background: rgba(255,255,255,0.5);
+        transition: all 0.2s ease;
+    }
+
+    .streamlit-expanderHeader:hover {
+        background: rgba(255,255,255,0.8);
+    }
+
+    /* Sidebar */
+    section[data-testid="stSidebar"] {
+        background: rgba(255,255,255,0.85);
+        backdrop-filter: blur(16px);
+        border-right: 1px solid rgba(255,255,255,0.5);
+    }
+
+    section[data-testid="stSidebar"] .stMarkdown h3 {
+        font-weight: 600;
+        font-size: 1rem;
+        color: #333;
+    }
+
+    /* Success/info/warning alerts */
+    div[data-testid="stAlert"] {
+        border-radius: 10px;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    }
+
+    /* Spinner */
+    .stSpinner>div>div {
+        border-color: #007bff transparent transparent transparent;
+    }
+
+    /* Text area (cookies) */
+    .stTextArea textarea {
+        border-radius: 10px;
+        border: 1px solid #e0e0e0;
+        font-size: 0.85rem;
+        transition: all 0.2s ease;
+        background: rgba(255,255,255,0.7);
+    }
+
+    .stTextArea textarea:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+    }
+
+    /* Caption */
+    .stCaption {
+        color: #888;
+        font-size: 0.85rem;
+    }
+
+    hr {
+        margin: 1.2rem 0;
+        border-color: rgba(0,0,0,0.06);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -72,32 +229,38 @@ def main():
 
     # --- Header Section ---
     st.markdown("""
-        <div style="text-align: center; padding-bottom: 2rem;">
-            <h1 style="font-size: 3rem; margin-bottom: 0;">📝 MarkItDown</h1>
-            <p style="font-size: 1.2rem; color: #666;">The simplest way to turn documents and webpages into Markdown</p>
+        <div style="text-align: center; padding: 1.5rem 0 2.5rem;">
+            <div style="font-size: 3.2rem; margin-bottom: 0.3rem;">📝</div>
+            <h1 style="font-size: 2.8rem; font-weight: 800; margin: 0; letter-spacing: -0.03em; background: linear-gradient(135deg, #1a1a2e, #007bff); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">MarkItDown</h1>
+            <p style="font-size: 1.1rem; color: #888; margin-top: 0.5rem; font-weight: 400;">Turn documents & webpages into clean Markdown, instantly.</p>
         </div>
     """, unsafe_allow_html=True)
     
-    # --- Sidebar for Advanced Settings ---
+    # --- Sidebar ---
     with st.sidebar:
-        st.header("🔧 Settings")
-        
-        st.markdown("### Supported Formats")
         st.markdown("""
-        - 📄 **Documents:** PDF, Word, PPT
-        - 📊 **Data:** Excel, CSV
-        - 🌐 **Web:** HTML, Articles
-        - 📦 **Archives:** ZIP
-        - 🎵 **Audio:** MP3, WAV
-        """)
+            <div style="padding: 0.5rem 0 1rem; border-bottom: 1px solid #eee; margin-bottom: 1.2rem;">
+                <h3 style="margin: 0; font-weight: 700; font-size: 1.1rem;">⚙️ Settings</h3>
+            </div>
+        """, unsafe_allow_html=True)
 
-        st.markdown("---")
-        with st.expander("🔑 Authentication (Optional)", expanded=False):
-            st.caption("Paste cookies here if a website blocks the conversion.")
+        st.markdown("""
+            <div style="font-size: 0.85rem; font-weight: 600; color: #555; margin-bottom: 0.5rem;">Supported Formats</div>
+        """, unsafe_allow_html=True)
+        st.markdown("""
+        <div style="font-size: 0.85rem; line-height: 1.8;">
+            📄 PDF, Word, PPT · 📊 Excel, CSV · 🌐 HTML, Articles · 📦 ZIP · 🎵 MP3, WAV
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("<hr style='margin: 1.2rem 0; border-color: #eee;'>", unsafe_allow_html=True)
+
+        with st.expander("🔑 Authentication", expanded=False):
+            st.caption("Paste cookies if a website blocks conversion.")
             ui_cookies = st.text_area(
                 "Cookies (Netscape format)",
                 help="Paste the content of your cookies.txt here.",
-                height=150,
+                height=130,
                 key="cookies_text"
             )
             if ui_cookies:
@@ -110,39 +273,36 @@ def main():
     tab1, tab2 = st.tabs(["📁 Upload Document", "🌐 Convert Webpage"])
     
     with tab1:
-        st.markdown("### 📄 Upload your file")
-        st.caption("Drag and drop any supported document to get started.")
-        
         uploaded_file = st.file_uploader(
-            "Choose a file", 
+            "Choose a file",
             type=None,
             accept_multiple_files=False,
             label_visibility="collapsed"
         )
 
         if uploaded_file is not None:
-            st.markdown("---")
+            st.markdown("<hr style='margin: 1rem 0; border-color: #eee;'>", unsafe_allow_html=True)
             col1, col2 = st.columns([2, 1])
             with col1:
-                st.write(f"**Ready to convert:** `{uploaded_file.name}`")
+                st.markdown(f"""
+                    <div style="display: flex; align-items: center; gap: 0.5rem; height: 100%;">
+                        <span style="font-size: 1.2rem;">📎</span>
+                        <span style="font-weight: 500; color: #333;">{uploaded_file.name}</span>
+                    </div>
+                """, unsafe_allow_html=True)
             with col2:
                 if st.button("🚀 Convert Now", type="primary", key="btn_file", use_container_width=True):
                     process_conversion(uploaded_file, ui_cookies)
 
     with tab2:
-        st.markdown("### 🌐 Enter a URL")
-        st.caption("Paste a link to any webpage or article (social media/video links not supported).")
-        
         url_input = st.text_input(
             "URL",
             placeholder="https://example.com/article",
             label_visibility="collapsed"
         )
-        
-        st.markdown("---")
+
         if st.button("🔍 Fetch and Convert", type="primary", key="btn_url", use_container_width=True):
             if url_input:
-                # Check for unsupported media domains
                 unsupported_domains = ["youtube.com", "youtu.be", "instagram.com", "tiktok.com", "facebook.com", "twitter.com", "x.com"]
                 if any(domain in url_input.lower() for domain in unsupported_domains):
                     st.error("🚫 **Unsupported Link:** Media-heavy platforms (YouTube, Instagram, etc.) are not supported for scraping. Please use a text-based article or blog post URL.")
@@ -219,33 +379,44 @@ def process_url(url, ui_cookies):
             st.error(f"❌ URL conversion failed: {str(e)}")
 
 def display_result(result, original_filename):
-    st.markdown("---")
-    col_success, col_dismiss = st.columns([5, 1])
-    with col_success:
-        st.success("✅ **Conversion complete!**")
-    with col_dismiss:
-        if st.button("✕", key="dismiss_result", help="Dismiss result"):
-            st.session_state.conversion_result = None
-            st.rerun()
-    
+    st.markdown("""
+        <div style="margin: 1.5rem 0 0.5rem;">
+            <div style="display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #d4edda, #c3e6cb); border-radius: 12px; padding: 0.8rem 1.2rem;">
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                    <span style="font-size: 1.3rem;">✅</span>
+                    <span style="font-weight: 600; color: #155724;">Conversion complete!</span>
+                </div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
     output_filename = os.path.splitext(original_filename)[0] + ".md"
-    
+
     col1, col2 = st.columns([2, 1])
     with col1:
         with st.expander("🔍 Preview Markdown", expanded=True):
-            st.markdown(result.text_content)
+            st.markdown(
+                result.text_content,
+                unsafe_allow_html=False
+            )
     with col2:
         st.download_button(
-            label="📥 Download .md File",
+            label="📥 Download .md",
             data=result.text_content,
             file_name=output_filename,
             mime="text/markdown",
             use_container_width=True,
             type="primary"
         )
+        if st.button("✕ Dismiss", key="dismiss_result", use_container_width=True):
+            st.session_state.conversion_result = None
+            st.rerun()
 
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    st.caption("Powered by [MarkItDown](https://github.com/microsoft/markitdown)")
+    st.markdown("""
+        <div style="text-align: center; padding: 2rem 0 0.5rem;">
+            <span style="font-size: 0.8rem; color: #aaa;">Powered by <a href="https://github.com/microsoft/markitdown" style="color: #007bff; text-decoration: none;">MarkItDown</a></span>
+        </div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
